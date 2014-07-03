@@ -1,0 +1,15 @@
+﻿@model TDDWebNav.Models.ProductClass
+@{
+    ViewBag.Title = "Products Page - " + Model.Name;
+}
+@foreach (var item in Model.Products)
+{
+    <div class="row">
+        <div class="col-sm-1">
+            @item.Code
+        </div>
+        <div class="col-sm-4">
+            @Html.ActionLink(item.Name, "Index", "Draw", new { productId = item.Id }, null)
+        </div>
+    </div>
+}

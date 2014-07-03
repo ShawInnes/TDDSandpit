@@ -1,0 +1,20 @@
+﻿@model TDDWebNav.Models.Product
+@{
+    ViewBag.Title = "Draws - " + Model.Name;
+}
+<h2>@ViewBag.Title</h2>
+
+@for (int i = 1; i < 8; i++)
+{
+    <div class="row">
+        <div class="col-sm-1">
+            @i.ToString("0000")
+        </div>
+        <div class="col-sm-4">
+            @Html.ActionLink(string.Format("Draw #{0:0000}", i), "Details", "Draw", new { productId = Model.Id, drawNo = i }, null)
+        </div>
+        <div class="col-sm-4">
+            @string.Format("{0}", DateTime.Now.AddDays(7 * i - 1).ToLongDateString())
+        </div>
+    </div>
+}

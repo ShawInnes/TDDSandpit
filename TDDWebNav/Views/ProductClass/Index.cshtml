@@ -1,0 +1,16 @@
+﻿@model IEnumerable<TDDWebNav.Models.ProductClass>
+@{
+    ViewBag.Title = "Products Page";
+}
+
+@foreach (var item in Model)
+{
+    <div class="row">
+        <div class="col-sm-1">
+            @item.Code
+        </div>
+        <div class="col-sm-3">
+            @Html.ActionLink(item.Name, "Index", "Product", new { productClassId = item.Id }, null)
+        </div>
+</div>
+}
