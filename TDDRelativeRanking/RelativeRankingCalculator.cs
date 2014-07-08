@@ -10,7 +10,8 @@ using Seq;
 
 namespace TDDRelativeRanking
 {
-    public class RelativeRankingCalculator
+    [ScoringHandler(ScoringType.RelativeRanking)]
+    public class RelativeRankingCalculator : IResultsCalculator
     {
         private int _place = 1;
         private int _teamCount = 0;
@@ -89,22 +90,15 @@ namespace TDDRelativeRanking
 
                 nextList = GetRemainingPlaces(_list.Where(p => tieList.Select(q => q.Id).Contains(p.Id)).ToList(), placeIndex, majority);
             }
-            //var totalGroup = tieList.GroupBy(p => p.Total).ToList();
-
-            Log.Debug("Exiting Tie Breaker");
         }
 
-        public RelativeRankingCalculator(List<Sheet> input)
+        public List<Sheet> GetResults(List<Sheet> input)
         {
-            this._list = input;
-        }
+            _list = input;
+            _teamCount = _list.Count();
 
-        public List<Sheet> GetResult()
-        {
             int judgeCount = _list.FirstOrDefault().Scores.Count();
             int majority = (int)(Math.Floor(judgeCount / 2.0) + (judgeCount % 2));
-
-            _teamCount = _list.Count();
 
             for (int placeIndex = 1; placeIndex <= _teamCount; placeIndex++)
             {

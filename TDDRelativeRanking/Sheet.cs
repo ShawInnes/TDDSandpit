@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 namespace TDDRelativeRanking
 {
-    [DebuggerDisplay("{Id} : {Tally} : {Total} : {Placing} ({ExpectedPlacing}) {IsTie}")]
+    [DebuggerDisplay("{Id} : {Tally} : {Total} : {Placing} ({ExpectedResult}) {IsTie}")]
     public class Sheet
     {
         public string Title { get; set; }

@@ -8,35 +8,15 @@ using Shouldly;
 using Serilog;
 using Seq;
 using System.Collections;
+using Autofac;
 
 namespace TDDRelativeRanking
 {
     [TestFixture]
-    public class Tests
+    public class RelativeRankingTests
     {
         public class DataFactoryClass
         {
-            public static IEnumerable CallbackTestCases
-            {
-                get
-                {
-                    var loadedList = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Sheet>>(System.IO.File.ReadAllText(@"data\extracted.json"));
-
-                    foreach (IGrouping<string, Sheet> grouping in loadedList
-                                                                    .Where(p => p.ScoringType.Equals("Callback"))
-                                                                    .GroupBy(p => p.Title))
-                    {
-                        int newId = 1;
-                        List<Sheet> list = grouping.ToList();
-                        list.ForEach(p => p.Id = newId++);
-
-                        yield return new TestCaseData(list)
-                                                .SetCategory("Callback")
-                                                .SetName(grouping.Key);
-                    }
-                }
-            }
-
             public static IEnumerable RelativeRankingTestCases
             {
                 get
@@ -59,6 +39,8 @@ namespace TDDRelativeRanking
             }
         }
 
+        private static IContainer container;
+
         [TestFixtureSetUp]
         public void Setup()
         {
@@ -66,31 +48,36 @@ namespace TDDRelativeRanking
                             .MinimumLevel.Is(Serilog.Events.LogEventLevel.Debug)
                             .WriteTo.Seq("http://127.0.0.1:5341/")
                             .CreateLogger();
+
+            var builder = new ContainerBuilder();
+            builder.RegisterAssemblyTypes(this.GetType().Assembly)
+                .AssignableTo<IResultsCalculator>()
+                .Keyed<IResultsCalculator>(t => GetMessageType(t));
+
+            container = builder.Build();
         }
 
-        [Test]
-        public void ShouldBeNoUnknownScoringTypes()
+        static ScoringType GetMessageType(Type type)
         {
-            var loadedList = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Sheet>>(System.IO.File.ReadAllText(@"data\extracted.json"));
+            var att = type.GetCustomAttributes(true).OfType<ScoringHandlerAttribute>().FirstOrDefault();
+            if (att == null)
+            {
+                throw new Exception("Somone forgot to put the ScoringHandlerAttribute on an IResultsCalculator!");
+            }
 
-            loadedList.ShouldAllBe(p => !p.ScoringType.Equals("Unknown"));
+            return att.ScoringType;
         }
+
 
         [Test, TestCaseSource(typeof(DataFactoryClass), "RelativeRankingTestCases")]
         public void RelativeRankingDataDrivenValidationTests(List<Sheet> list)
         {
-            RelativeRankingCalculator calculator = new RelativeRankingCalculator(list);
-
-            foreach (Sheet sheet in calculator.GetResult())
-                sheet.Placing.ShouldBe(sheet.ExpectedResult);
-        }
-
-        [Test, TestCaseSource(typeof(DataFactoryClass), "CallbackTestCases")]
-        public void CallbackDataDrivenValidationTests(List<Sheet> list)
-        {
-            foreach (Sheet sheet in list)
+            using (var lifetime = container.BeginLifetimeScope())
             {
-                sheet.Scores.Sum().ShouldBe(sheet.ExpectedResult);
+                var handler = lifetime.ResolveKeyed<IResultsCalculator>(ScoringType.RelativeRanking);
+
+                foreach (Sheet sheet in handler.GetResults(list))
+                    sheet.Placing.ShouldBe(sheet.ExpectedResult);
             }
         }
 
@@ -107,12 +94,7 @@ namespace TDDRelativeRanking
               new Sheet(600,6, 4, 2, 5, 6, 6)
                 };
 
-            RelativeRankingCalculator calculator = new RelativeRankingCalculator(list);
-
-            foreach (Sheet sheet in calculator.GetResult())
-            {
-                sheet.Placing.ShouldBe(sheet.ExpectedResult);
-            }
+            RelativeRankingDataDrivenValidationTests(list);
         }
 
         [Test]
@@ -127,12 +109,7 @@ namespace TDDRelativeRanking
               new Sheet(500,5,5,2,4,1,4)
                 };
 
-            RelativeRankingCalculator calculator = new RelativeRankingCalculator(list);
-
-            foreach (Sheet sheet in calculator.GetResult())
-            {
-                sheet.Placing.ShouldBe(sheet.ExpectedResult);
-            }
+            RelativeRankingDataDrivenValidationTests(list);
         }
 
         [Test]
@@ -152,12 +129,7 @@ namespace TDDRelativeRanking
                 new Sheet(1000,10,10,10,10,10,10,10,10),
             };
 
-            RelativeRankingCalculator calculator = new RelativeRankingCalculator(list);
-
-            foreach (Sheet sheet in calculator.GetResult())
-            {
-                sheet.Placing.ShouldBe(sheet.ExpectedResult);
-            }
+            RelativeRankingDataDrivenValidationTests(list);
         }
 
         [Test]
@@ -177,12 +149,7 @@ namespace TDDRelativeRanking
                     new Sheet(171,10,8,6,4,10,10,9,10)
                 };
 
-            RelativeRankingCalculator calculator = new RelativeRankingCalculator(list);
-
-            foreach (Sheet sheet in calculator.GetResult())
-            {
-                sheet.Placing.ShouldBe(sheet.ExpectedResult);
-            }
+            RelativeRankingDataDrivenValidationTests(list);
         }
 
         [Test]
@@ -197,12 +164,7 @@ namespace TDDRelativeRanking
                 new Sheet(500,5,5,5,5,4,5),
             };
 
-            RelativeRankingCalculator calculator = new RelativeRankingCalculator(list);
-
-            foreach (Sheet sheet in calculator.GetResult())
-            {
-                sheet.Placing.ShouldBe(sheet.ExpectedResult);
-            }
+            RelativeRankingDataDrivenValidationTests(list);
         }
 
         [TestCase(1, Result = 1, Category = "JudgeMajority")]
